@@ -1,16 +1,36 @@
-import mongoose from "mongoose"
-import { DB_NAME } from "../constants.js"
+/**
+ * 🔌 Database Connection (MongoDB)
+ *
+ * This function connects our app to MongoDB using Mongoose.
+ * It ensures:
+ * - Successful connection before app runs
+ * - Proper error handling if connection fails
+ */
 
+import mongoose from "mongoose";
+import { DB_NAME } from "../constants.js";
+
+
+// Function to connect to MongoDB
 const connectDB = async () => {
     try {
-        const connectionInstance = await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`)
+        // Connect using URI + database name
+        const connectionInstance = await mongoose.connect(
+            `${process.env.MONGODB_URI}/${DB_NAME}`
+        );
 
-        console.log(`\n MongoDB connected !! DB HOST: ${connectionInstance.connection.host}`);
-        
+        // Log success with DB host info (useful for debugging)
+        console.log(
+            `\nMongoDB connected !! DB HOST: ${connectionInstance.connection.host}`
+        );
+
     } catch (error) {
-        console.error('MONGODB connection FAILED ', error)
-        process.exit(1)
+        // If connection fails → log error and stop the app
+        console.error("MongoDB connection FAILED:", error);
+        process.exit(1); // exit with failure code
     }
-}
+};
 
-export default connectDB
+
+// Export function so it can be used in index.js
+export default connectDB;

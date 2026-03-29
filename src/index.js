@@ -1,83 +1,66 @@
-// require('dotenv').config({path: './env'})  // require and import both hamper the consistency of appn
+/**
+ * 🚀 Entry Point
+ * - Load env variables
+ * - Connect to DB
+ * - Start server (only if DB connects)
+ */
 
-// We use dotenv to securely load custom variables from a .env file into process.env so they aren't hardcoded in our source code.
-
-import dotenv from "dotenv"
-
-// import mongoose from "mongoose"
-// import { DB_NAME } from "./constants"
-import connectDB from "./db/index.js"
-
-dotenv.config( {
-    path: './env'
-})
+import dotenv from "dotenv";
+import connectDB from "./db/index.js";
+import { app } from "./app.js"; 
 
 
-// from second approach write the code for db connection in another file in db folder
+// Load environment variables from .env
+dotenv.config({ path: './.env' });
 
+
+// Connect to DB → then start server
 connectDB()
-.then( () => {
-    app.listen(process.env.PORT || 8000 , () => {
-        console.log((`server is running at port: ${process.env.PORT} `));
-    })
-})
-.catch((err) => {
-    console.log("mongo db connection failed !!!",err);
-    
-})
+    .then(() => {
+        const PORT = process.env.PORT || 8000;
 
+        // Start Express server
+        app.listen(PORT, () => {
+            console.log(`Server running on port: ${PORT}`);
+        });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*    first approach
-
-import express from "express"
-
-const app = express()
-
-// function connectdb(){}
-// connectdb()   this is fine
-
-// iffi (try to start with semicolon)
-;( async () => {
-    try {
-        await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`)
+        // Handle runtime app errors
         app.on("error", (error) => {
-            console.log('error: appn not able to talk',error);
-            throw error
-        })
+            console.error("App error:", error);
+            throw error;
+        });
+    })
+    .catch((err) => {
+        // If DB fails, stop the app
+        console.error("DB connection failed:", err);
+        process.exit(1);
+    });
 
-        app.listen(process.env.PORT, ()=>{
-            console.log(`app is listening on port ${process.env.PORT}`);
-            
-        })
+
+
+
+
+/*
+--- Alternative (IIFE approach) ---
+- Works fine for small apps
+- Not ideal for larger projects (less modular)
+
+;(async () => {
+    try {
+        await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`);
+
+        app.on("error", (error) => {
+            console.error("App error:", error);
+            throw error;
+        });
+
+        app.listen(process.env.PORT, () => {
+            console.log(`Server running on port ${process.env.PORT}`);
+        });
+
     } catch (error) {
-        console.error("error: ",error);
-        throw error
-        
+        console.error("Init error:", error);
+        throw error;
     }
-}) ()
-
+})();
 */
