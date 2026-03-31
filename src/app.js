@@ -49,6 +49,19 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 
+// routes import
+import userRouter from "./routes/user.routes.js";
+
+// routes declaration
+
+// app.use("/users",userRouter)
+app.use("api/v1/users",userRouter)
+
+//https:localhost:8000/api/v1/users/register
+
+
+
+
 // 🧠 Middleware Concept:
 // Middleware are functions that run between request → response
 // app.use() is used to add them to the request flow
