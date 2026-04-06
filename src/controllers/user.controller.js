@@ -8,7 +8,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // 1. get user details from frontend
   const { username, email, fullname, password } = req.body;
-  console.log("email: ", email);
+  // console.log("email: ", email);
 
   // 2. validation - not empty
   if (
@@ -25,6 +25,8 @@ const registerUser = asyncHandler(async (req, res) => {
   if(existedUser) {
     throw new ApiError(409, "User with email or username already existed")
   }
+  //console.log(req.files);
+  
 
   // 4. check for images, check for avatar
   const avatarLocalPath = req.files?.avatar?.[0]?.path;
@@ -64,10 +66,128 @@ const registerUser = asyncHandler(async (req, res) => {
   
   // 9. if created return res
   return res.status(201).json(
-    new ApiResponse(200, createdUser, "User registered Successfully")
+     new ApiResponse(201, createdUser, "User registered Successfully")
   )
 
   // else return error
 });
 
-export { registerUser };
+const generateAccessAndRefreshTokens = async (userId) => {
+  try {
+    const user = await User.findById(userId)
+    const accessToken = user.generateAccessToken()
+    const refreshToken = user.generateRefreshToken()
+  
+    // saving refresh token for that user in our database
+    user.refreshToken = refreshToken
+    await user.save({validateBeforeSave: false})
+
+    return {accessToken, refreshToken}
+
+  } catch (error) {
+    throw new ApiError(500, "something went wrong while generating refresh and access token")
+  }
+}
+
+
+const loginUser = asyncHandler(async (req,res) => {
+  // 1. bring data from req body
+  const {email, username, password} = req.body
+
+  // 2. username or email
+  if(!username || !email) {
+    throw new ApiError(401, "username or email is required")
+  }
+
+  // 3. find the user
+  const loginUser = await User.findOne({
+    $or: [{username},{email}]
+  })
+
+  if(!loginUser){
+    throw new ApiError(404,"user doesnt exist")
+  }
+
+  // 4. if user found check his password
+  const isPasswordValid = await loginUser.isPasswordCorrect(password)
+
+  if(!isPasswordValid){
+    throw new ApiError(401,"wrong password")
+  }
+
+  // 5. if correct pass , generate access and refresh token ang give to user
+  const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(loginUser._id)
+
+  // 6. send cookies
+   const user = await User.findById(loginUser._id).
+   select("-password -refreshToken")
+
+   const options = {
+    httpOnly: true,
+    secure: true
+   }
+
+   return res.
+   status(200).
+   cookie("accessToken",accessToken,options).
+   cookie("refreshToken",refreshToken,options).
+   json(
+    new ApiResponse(
+      200, 
+      {
+        user: user, accessToken, refreshToken
+      },
+      "user logged in successfully"
+    )
+   )
+
+  // what i WROTE
+  // take username and password from user 
+  // verify and give a access token to user and a refresh token
+  // when access token expires check with refresh token 
+})
+
+
+const logoutUser = asyncHandler(async(req,res) => {
+  // we will need middleware to get user id to logout
+  await User.findByIdAndUpdate(
+    req.user._id, 
+    {
+      $set: {
+        refreshToken: undefined
+      }
+    },
+    {
+      new: true
+    }
+  )
+  
+  const options = {
+    httpOnly: true,
+    secure: true
+   }
+
+   return res.
+   status(200).
+   clearCookie("accessToken", options).
+   clearCookie("refreshToken",options).
+   json(new ApiResponse(200,{},"user logged out"))
+
+})
+
+export { 
+  registerUser,
+  loginUser,
+  logoutUser
+};
+
+
+// not importing middle ware but can still use it
+// why do we write req,res in every function and what values do these hold and how they get these values
+// what are cookies and what information does they hold are they only in user's browser or backend as well and what is this cookie parser and what it do basically 
+// how are we getting access token in the auth middleware and explain the exact logic to me how are we implementing the logot internally 
+// what are these options and what are they doing 
+// how req.user i was able to use it in controller even though i didnt import it from the auth middleware
+// why do we use next in async handler and especially with middle ware is there something special about them 
+// in models when we wrote generate tokens and here when we wrote tokens what exactly is the difference bw these two 
+// basically i am unable to understand how information and data is flowing between various files 
