@@ -221,11 +221,117 @@ try {
 }
 })
 
+const changeCurrentPassword = asyncHandler(async (req,res) => {
+  const {oldPassword, newPassword} = req.body
+
+  const user = await User.findById(req.user?._id)
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+  if(!isPasswordCorrect) {
+    throw new ApiError(400,"invalid old password")
+  }
+
+  user.password = newPassword
+  await user.save({validateBeforeSave: false})
+
+  return res.
+         status(200).
+         json( new ApiResponse(200,{},"password changed successfully"))
+})
+
+const getCurrentUser = asyncHandler(async (req,res) => {
+  return res.status(200).
+        json(200,req.user, "current user fetched successfully")
+})
+
+const updateAccountDetails = asyncHandler(async(req,res) => {
+  const {fullname, email} = req.body
+
+  if(!fullname || !email){
+    throw new ApiError(400, "all fields are required")
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullname,
+        email
+      }
+    },
+    {new: true}
+  ).select("-password")
+
+  return res.status(200).
+            json(new ApiResponse(200,user,"account details updated successfully"))
+})
+
+const updateUserAvatar = asyncHandler(async (req,res) => {
+  const avatarLocalPath = req.file?.path
+
+  if(!avatarLocalPath){
+    throw new ApiError(400,"avatar file is missing")
+  }
+
+  const avatar = await uploadCloudinary(avatarLocalPath)
+
+  if(!avatar.url) {
+    throw new ApiError(400,"error while uploading avatar on cloudinary")
+
+    const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $set: {
+          avatar: avatar.url
+        }
+      },
+      {new: true}
+    ).select("-password")
+  }
+
+   return res.status(200).
+              json(new ApiResponse(200,user,"avatar image updated successfully"))
+})
+
+const updateUserCoverImage = asyncHandler(async (req,res) => {
+  const coverLocalPath = req.file?.path
+
+  if(!coverLocalPath){
+    throw new ApiError(400,"cover image file is missing")
+  }
+
+  const coverImage = await uploadCloudinary(coverLocalPath)
+
+  if(!coverImage.url) {
+    throw new ApiError(400,"error while uploading cover on cloudinary")
+
+    const user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $set: {
+          coverImage: coverImage.url
+        }
+      },
+      {new: true}
+    ).select("-password")
+  }
+
+  return res.status(200).
+              json(new ApiResponse(200,user,"cover Image image updated successfully"))
+
+
+})
+
 export { 
   registerUser,
   loginUser,
   logoutUser,
-  refreshAccessToken
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage
 };
 
 
@@ -255,3 +361,7 @@ export {
 // why do we use next in async handler and especially with middle ware is there something special about them 
 // in models when we wrote generate tokens and here when we wrote tokens what exactly is the difference bw these two 
 // basically i am unable to understand how information and data is flowing between various files 
+
+
+// when user is logged in then does the req has .user cause i noticed req gets .user only when logout is hit , so while updating password can we use req.user or not 
+// when any file comes in req does multer automatically stores it in public/temp 
